@@ -66,17 +66,24 @@ function update_tomls!(
             keep_old_compat = keep_old_compat,
             update_manifest = update_manifest,
         )
-        success(`$gitcmd diff --exit-code`) && (@info "Done. No changes made."; return)
 
 
         if update_manifest
             manifest = Pkg.Types.manifestfile_path(pwd(), strict = true)
             !isnothing(manifest) && run(`$gitcmd add $manifest`)
         end
-        project = Pkg.Types.projectfile_path(pwd())
+        project = Pkg.Types.projectfile_path(pwd(), strict=true)
         !isnothing(project) && run(`$gitcmd add $project`)
 
-        success(`$gitcmd diff --cached --exit-code`) && (@info "Done. No changes made."; return)
+        if success(`$gitcmd diff --cached --exit-code`)
+            @info "Done. No changes made."
+            return
+        elseif success(`$gitcmd ls-remote --exit-code --heads origin $compatbranch`)
+            if success(`$gitcmd diff --cached origin/$compatbranch --exit-code`)
+                @info "Done. No changes made (relative to origin/$compatbranch)"
+                return
+            end
+        end
 
 
         title = "New compat entries"
@@ -215,7 +222,6 @@ function _update_tomls!(
     @assert old_project["deps"] == updated_project["deps"]
 
     io = IOBuffer()
-    @info "KEEP $keep_old_compat"
 
     keep_old_compat && println(io, "Keeping Old compat entries")
     update_manifest && println(io, "Updating Manifest")
@@ -344,7 +350,6 @@ function get_updated_tomls(pkgdir::AbstractString)
         manifestpath = Pkg.Operations.manifestfile_path(pwd(), strict = true)
         projectpath = Pkg.Operations.projectfile_path(pwd(), strict = true)
 
-        !isnothing(manifestpath) && rm(manifestpath)
         open(projectpath, "w") do io
             Pkg.TOML.print(io, tomls.project.dict)
         end
