@@ -149,8 +149,7 @@ function with_sandbox_env(
             cpinto(dirname(project), sandbox)
         else
             manifest = Pkg.Operations.manifestfile_path(dirname(project), strict = true)
-            !isnothing(manifest) &&
-            isfile(manifest) && cp(manifest, joinpath(sandbox, basename(manifest)))
+            !isnothing(manifest) && cp(manifest, joinpath(sandbox, basename(manifest)))
             cp(project, joinpath(sandbox, basename(project)))
         end
 
@@ -162,7 +161,7 @@ function with_sandbox_env(
             end
             Pkg.activate(pwd())
             append!(LOAD_PATH, map(normpath, extra_load_paths))
-            fn()
+            return fn()
         finally
             cd(old_dir)
             append!(empty!(LOAD_PATH), old_load_path)

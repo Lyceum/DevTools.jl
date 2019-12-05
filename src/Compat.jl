@@ -204,7 +204,6 @@ function update_tomls!(
 )
     result = _update_tomls!(pkgdir, keep_old_compat, update_manifest)
     msg = format_message(result)
-    @info msg
     result
 end
 
@@ -333,7 +332,9 @@ end
 
 function get_old_tomls(pkgdir)
     with_sandbox_env(pkgdir) do
-        Pkg.resolve() # Create manifest if one doesn't already exist,
+        # Create/resolve manifest if one doesn't already exist,
+        Pkg.instantiate()
+        Pkg.resolve()
         return parsetomls(pwd())
     end
 end
@@ -353,6 +354,8 @@ function get_updated_tomls(pkgdir::AbstractString)
         open(projectpath, "w") do io
             Pkg.TOML.print(io, tomls.project.dict)
         end
+        Pkg.instantiate()
+        Pkg.resolve()
         Pkg.update()
         return parsetomls(pwd())
     end
