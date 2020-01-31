@@ -29,7 +29,7 @@ function namedgenerate(pkgname::String, preset::NamedTuple = LYCEUM_PKGTEMPLATE;
 end
 
 function lyceum_register(package_repo, commit, lyceumbot_pat)
-    register(package_repo, commit, LYCEUM_REGISTRY.url, GitHub.authenticate(lyceumbot_pat), "lycuembot")
+    register(package_repo, commit, LYCEUM_REGISTRY.url, GitHub.authenticate(lyceumbot_pat), "lyceumbot")
 end
 
 function register(package_repo::AbstractString, commit::AbstractString, registry::AbstractString, auth::GitHub.Authorization, gituser::AbstractString; ignore_dirty::Bool=false, kwargs...)
