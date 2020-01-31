@@ -180,3 +180,16 @@ end
 
 runzshinter(cmd::Cmd) = runzsh(join(cmd.exec, " "))
 runzshinter(cmdstr::String) = run(`zsh -ic "$cmdstr; exit"`)
+
+function envinfo(dstpath::AbstractString)
+    mktempdir() do dir
+        env = Pkg.Types.Context().env
+        Pkg.Types.write_project(env.project, joinpath(dir, "Project.toml"))
+        Pkg.Types.write_manifest(env.manifest, joinpath(dir, "Manifest.toml"))
+        open(joinpath(dir, "versioninfo.txt"), "w") do io
+            versioninfo(io)
+        end
+        Pkg.PlatformEngines.probe_platform_engines!()
+        Pkg.PlatformEngines.package(dir, dstpath)
+    end
+end
