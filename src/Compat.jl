@@ -349,25 +349,29 @@ end
 
 function get_updated_tomls(pkgdir::AbstractString)
     with_sandbox_env(pkgdir) do
-        tomls = parsetomls(pwd())
-        if haskey(tomls.project.dict, "compat")
-            for pkg in keys(tomls.project.dict["compat"])
-                pkg != "julia" && delete!(tomls.project.dict["compat"], pkg)
-            end
-        end
-
-        manifestpath = Pkg.Operations.manifestfile_path(pwd(), strict = true)
-        projectpath = Pkg.Operations.projectfile_path(pwd(), strict = true)
-
-        open(projectpath, "w") do io
-            Pkg.TOML.print(io, tomls.project.dict)
-        end
+        purge_compat!(pwd())
         Pkg.instantiate()
         Pkg.resolve()
         Pkg.update()
         return parsetomls(pwd())
     end
 end
+
+function purge_compat!(pkgdir::AbstractString)
+    cd(pkgdir) do
+        tomls = parsetomls(pwd())
+        if haskey(tomls.project.dict, "compat")
+            for pkg in keys(tomls.project.dict["compat"])
+                pkg != "julia" && delete!(tomls.project.dict["compat"], pkg)
+            end
+        end
+        projectpath = Pkg.Operations.projectfile_path(pwd(), strict = true)
+        open(projectpath, "w") do io
+            Pkg.TOML.print(io, tomls.project.dict)
+        end
+    end
+end
+
 
 
 isstdlib(name::AbstractString) = isstdlib(Base.UUID(name))
