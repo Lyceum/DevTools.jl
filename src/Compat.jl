@@ -11,6 +11,10 @@ const COMPAT_UUID = "0062fa4e-0639-437d-8ed2-9da17d9c0af2"
 const DEFAULT_MASTERBRANCH = "master"
 const DEFAULT_COMPATBRANCH = "compat"
 
+const DEF_KEEP_OLD_COMPAT = false
+const DEF_UPDATE_MANIFEST = true
+const DEF_DROP_PATCH = true
+
 Base.@kwdef struct RepoSpec
     token::String
     username::String
@@ -34,8 +38,9 @@ end
 
 function update_tomls!(
     repospec::RepoSpec;
-    keep_old_compat::Bool = false,
-    update_manifest::Bool = true,
+    keep_old_compat::Bool = DEF_KEEP_OLD_COMPAT,
+    update_manifest::Bool = DEF_UPDATE_MANIFEST,
+    drop_patch::Bool = DEF_DROP_PATCH,
 )
     token = repospec.token
     reponame = repospec.reponame
@@ -65,6 +70,7 @@ function update_tomls!(
             pwd(),
             keep_old_compat = keep_old_compat,
             update_manifest = update_manifest,
+            drop_patch = drop_patch
         )
 
 
@@ -199,10 +205,11 @@ end
 
 function update_tomls!(
     pkgdir::AbstractString;
-    keep_old_compat = false,
-    update_manifest = true,
+    keep_old_compat = DEF_KEEP_OLD_COMPAT,
+    update_manifest = DEF_UPDATE_MANIFEST,
+    drop_patch = DEF_DROP_PATCH,
 )
-    result = _update_tomls!(pkgdir, keep_old_compat, update_manifest)
+    result = _update_tomls!(pkgdir, keep_old_compat, update_manifest, drop_patch)
     msg = format_message(result)
     result
 end
@@ -211,6 +218,7 @@ function _update_tomls!(
     pkgdir::AbstractString,
     keep_old_compat::Bool,
     update_manifest::Bool,
+    drop_patch::Bool
 )
     old_tomls = get_old_tomls(pkgdir)
     updated_tomls = get_updated_tomls(pkgdir)
@@ -233,7 +241,7 @@ function _update_tomls!(
 
     hasjuliacompat = hascompat && haskey(old_project["compat"], "julia")
     if !hasjuliacompat
-        julia_compat = format_compat(VERSION)
+        julia_compat = format_compat(VERSION, drop_patch)
         updated_project["compat"]["julia"] = julia_compat
     end
 
@@ -260,23 +268,23 @@ function _update_tomls!(
         end
 
         if haskey(old_project["compat"], name)
-            old_compat = format_compat(old_project["compat"][name])
+            old_compat = format_compat(old_project["compat"][name], drop_patch)
             if VersionSpec(semver_spec(old_compat)) == VersionSpec(semver_spec(string(new_version)))
                 new_compat = old_compat
                 push!(unchanged_compats, (name, old_compat))
             elseif majorminorequal(old_compat, string(new_version))
-                new_compat = format_compat(new_version)
+                new_compat = format_compat(new_version, drop_patch)
                 push!(changed_compats, (name, old_compat, new_compat))
             else
                 if keep_old_compat
-                    new_compat = format_compat(old_compat, new_version)
+                    new_compat = format_compat(old_compat, new_version, drop_patch)
                 else
-                    new_compat = format_compat(new_version)
+                    new_compat = format_compat(new_version, drop_patch)
                 end
                 push!(changed_compats, (name, old_compat, new_compat))
             end
         else
-            new_compat = format_compat(new_version)
+            new_compat = format_compat(new_version, drop_patch)
             push!(new_compats, (name, new_compat))
         end
         updated_project["compat"][name] = new_compat
@@ -370,10 +378,10 @@ no_prerelease_or_build(v::VersionNumber) = v.build == v.prerelease == ()
 no_prerelease_or_build(v) = no_prerelease_or_build(VersionNumber(v))
 
 
-function format_compat(v::VersionNumber)
+function format_compat(v::VersionNumber, drop_patch::Bool)
     no_prerelease_or_build(v) ||
     throw(ArgumentError("version cannot have build or prerelease. Got: $v"))
-    if v.patch == 0
+    if v.patch == 0 || drop_patch
         if v.minor == 0
             if v.major == 0 # v.major is 0, v.minor is 0, v.patch is 0
                 throw(DomainError("0.0.0 is not a valid input"))
@@ -387,7 +395,8 @@ function format_compat(v::VersionNumber)
         return "$(v.major).$(v.minor).$(v.patch)"
     end
 end
-function format_compat(compat::AbstractString)
+
+function format_compat(compat::AbstractString, drop_patch::Bool)
     compat = String(compat)
     try
         return format_compat(VersionNumber(compat))
@@ -421,7 +430,9 @@ function majorminorequal(x::AbstractString, y::AbstractString)
 end
 
 
-format_compat(old, new) = "$(format_compat(old)), $(format_compat(new))"
+function format_compat(old, new, drop_patch)
+    "$(format_compat(old, drop_patch)), $(format_compat(new, drop_patch))"
+end
 
 
 authurl(user, token, fullname) =
