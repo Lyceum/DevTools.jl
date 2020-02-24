@@ -11,7 +11,7 @@ const COMPAT_UUID = "0062fa4e-0639-437d-8ed2-9da17d9c0af2"
 const DEFAULT_MASTERBRANCH = "master"
 const DEFAULT_COMPATBRANCH = "compat"
 
-const DEF_KEEP_OLD_COMPAT = false
+const DEF_KEEP_OLD_COMPAT = true
 const DEF_UPDATE_MANIFEST = true
 const DEF_DROP_PATCH = true
 
