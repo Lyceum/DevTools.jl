@@ -1,7 +1,7 @@
 name = "DevTools"
 uuid = "c0099f9a-b73b-11e9-1fa7-371fe55f427b"
 authors = ["Colin Summers", "The Contributors of DevTools"]
-version = "0.2.0"
+version = "0.3.0"
 
 [deps]
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
